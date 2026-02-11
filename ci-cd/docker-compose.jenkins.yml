@@ -1,0 +1,105 @@
+version: '3.9'
+
+services:
+  # ============================================================================
+  # JENKINS LTS SERVER
+  # ============================================================================
+  jenkins:
+    build:
+      context: .
+      dockerfile: Dockerfile.jenkins
+    container_name: jenkins-server
+    hostname: jenkins
+    
+    # Ports
+    ports:
+      - "8080:8080"      # Jenkins Web UI
+      - "50000:50000"    # Jenkins Agent communication
+    
+    # Volumes for persistence and Docker socket
+    volumes:
+      # Jenkins home directory (all config, jobs, logs)
+      - jenkins_home:/var/jenkins_home
+      
+      # Docker socket - permettre les builds Docker
+      - /var/run/docker.sock:/var/run/docker.sock
+      
+      # Docker CLI access
+      - /usr/bin/docker:/usr/bin/docker:ro
+      
+      # Cache for faster builds
+      - jenkins_cache:/var/jenkins_cache
+      
+      # SSH keys for Git (optionnel)
+      - ~/.ssh:/var/jenkins_home/.ssh:ro
+    
+    # Environment variables
+    environment:
+      # Disable security wizard for automation
+      - JENKINS_OPTS=--argumentsRealm.passwd.admin=admin --argumentsRealm.roles.admin=admin
+      
+      # Java options
+      - JAVA_OPTS=-Djenkins.install.runSetupWizard=false
+      
+      # Admin credentials (change in production!)
+      - JENKINS_USER=admin
+      - JENKINS_PASS=admin
+      
+      # System properties
+      - TZ=UTC
+    
+    # User (run as jenkins user, not root - best practice)
+    user: "0"  # Docker in Docker nécessite root
+    
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
+    
+    # Restart policy
+    restart: unless-stopped
+    
+    # Network
+    networks:
+      - jenkins-network
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    
+    # Logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# ============================================================================
+# VOLUMES
+# ============================================================================
+volumes:
+  jenkins_home:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+      o: size=2G
+  
+  jenkins_cache:
+    driver: local
+
+# ============================================================================
+# NETWORKS
+# ============================================================================
+networks:
+  jenkins-network:
+    driver: bridge

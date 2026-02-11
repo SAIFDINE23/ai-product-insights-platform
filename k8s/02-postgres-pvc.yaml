@@ -1,0 +1,50 @@
+# PersistentVolumeClaim pour les données PostgreSQL
+# Assure la persistance des données même après redémarrage des pods
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+  namespace: ai-product-insights
+  labels:
+    app: postgresql
+spec:
+  accessModes:
+    - ReadWriteOnce  # Accès en lecture/écriture depuis un seul nœud
+  resources:
+    requests:
+      storage: 10Gi  # Ajustable selon vos besoins
+  storageClassName: standard  # Utilise la StorageClass par défaut du cluster
+
+---
+# ConfigMap pour l'initialisation PostgreSQL
+# Crée les tables si elles n'existent pas
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init-script
+  namespace: ai-product-insights
+data:
+  init.sql: |
+    -- Création des tables si elles n'existent pas
+    CREATE TABLE IF NOT EXISTS reviews (
+      id SERIAL PRIMARY KEY,
+      customer_name VARCHAR(255) NOT NULL,
+      product_name VARCHAR(255) NOT NULL,
+      rating INTEGER CHECK (rating >= 1 AND rating <= 5),
+      review_text TEXT NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS reviews_analysis (
+      id SERIAL PRIMARY KEY,
+      review_id INTEGER REFERENCES reviews(id) ON DELETE CASCADE,
+      sentiment VARCHAR(50) NOT NULL,
+      sentiment_score FLOAT,
+      topics TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_reviews_created ON reviews(created_at);
+    CREATE INDEX IF NOT EXISTS idx_analysis_sentiment ON reviews_analysis(sentiment);

@@ -1,0 +1,275 @@
+# NetworkPolicies - Sécurité réseau et isolation des services
+# Définit les règles d'accès entre les pods
+# ATTENTION: Active CNI réseau-aware (Calico, Cilium, etc.)
+
+---
+# Dénier tout le trafic par défaut (default-deny)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: ai-product-insights
+  labels:
+    name: default-deny-ingress
+spec:
+  podSelector: {}  # S'applique à tous les pods du namespace
+  policyTypes:
+    - Ingress
+
+---
+# Dénier tout le trafic egress par défaut
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-egress
+  namespace: ai-product-insights
+  labels:
+    name: default-deny-egress
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+
+---
+# Permettre à PostgreSQL de recevoir les connexions depuis les services backend
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: postgres-allow-backend
+  namespace: ai-product-insights
+  labels:
+    app: postgresql
+spec:
+  podSelector:
+    matchLabels:
+      app: postgresql
+  policyTypes:
+    - Ingress
+  ingress:
+    # Accepter les connexions des services backend
+    - from:
+        - podSelector:
+            matchLabels:
+              app: scraper-service
+        - podSelector:
+            matchLabels:
+              app: ai-analysis-service
+        - podSelector:
+            matchLabels:
+              app: stats-service
+      ports:
+        - protocol: TCP
+          port: 5432
+
+---
+# Permettre à Scraper Service de se connecter à PostgreSQL
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: scraper-allow-postgres
+  namespace: ai-product-insights
+  labels:
+    app: scraper-service
+spec:
+  podSelector:
+    matchLabels:
+      app: scraper-service
+  policyTypes:
+    - Egress
+  egress:
+    # Vers PostgreSQL
+    - to:
+        - podSelector:
+            matchLabels:
+              app: postgresql
+      ports:
+        - protocol: TCP
+          port: 5432
+    # DNS (pour la résolution de noms)
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: UDP
+          port: 53
+
+---
+# Permettre à AI Analysis Service de se connecter à PostgreSQL
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: ai-analysis-allow-postgres
+  namespace: ai-product-insights
+  labels:
+    app: ai-analysis-service
+spec:
+  podSelector:
+    matchLabels:
+      app: ai-analysis-service
+  policyTypes:
+    - Egress
+  egress:
+    # Vers PostgreSQL
+    - to:
+        - podSelector:
+            matchLabels:
+              app: postgresql
+      ports:
+        - protocol: TCP
+          port: 5432
+    # DNS
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: UDP
+          port: 53
+
+---
+# Permettre à Stats Service de se connecter à PostgreSQL
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: stats-allow-postgres
+  namespace: ai-product-insights
+  labels:
+    app: stats-service
+spec:
+  podSelector:
+    matchLabels:
+      app: stats-service
+  policyTypes:
+    - Egress
+  egress:
+    # Vers PostgreSQL
+    - to:
+        - podSelector:
+            matchLabels:
+              app: postgresql
+      ports:
+        - protocol: TCP
+          port: 5432
+    # DNS
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: UDP
+          port: 53
+
+---
+# Permettre au Frontend de communiquer avec Stats Service
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: frontend-allow-stats
+  namespace: ai-product-insights
+  labels:
+    app: dashboard-frontend
+spec:
+  podSelector:
+    matchLabels:
+      app: dashboard-frontend
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Accepter le trafic entrant depuis l'Ingress (monde externe)
+    - from:
+        - namespaceSelector: {}  # Depuis l'Ingress dans d'autres namespaces
+      ports:
+        - protocol: TCP
+          port: 80
+  egress:
+    # Sortir vers Stats Service
+    - to:
+        - podSelector:
+            matchLabels:
+              app: stats-service
+      ports:
+        - protocol: TCP
+          port: 8000
+    # Sortir vers Scraper Service (optionnel)
+    - to:
+        - podSelector:
+            matchLabels:
+              app: scraper-service
+      ports:
+        - protocol: TCP
+          port: 8000
+    # DNS
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: UDP
+          port: 53
+
+---
+# Permettre à l'Ingress de communiquer avec tous les services
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-from-ingress
+  namespace: ai-product-insights
+  labels:
+    name: allow-from-ingress
+spec:
+  podSelector:
+    matchLabels: {}  # S'applique à tous les pods
+  policyTypes:
+    - Ingress
+  ingress:
+    # Permettre le trafic depuis le contrôleur Ingress
+    - from:
+        # Note: adapter le namespace selon votre setup (ingress-nginx par défaut)
+        - namespaceSelector:
+            matchLabels:
+              name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 80
+        - protocol: TCP
+          port: 8000
+
+---
+# Permettre à tous les services de communiquer entre eux (intra-cluster)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-internal-communication
+  namespace: ai-product-insights
+  labels:
+    name: allow-internal-communication
+spec:
+  podSelector: {}  # S'applique à tous les pods
+  policyTypes:
+    - Ingress
+  ingress:
+    # Accepter le trafic depuis d'autres pods du même namespace
+    - from:
+        - podSelector: {}
+      ports:
+        - protocol: TCP
+          port: 8000
+        - protocol: TCP
+          port: 5432
+        - protocol: TCP
+          port: 80
+
+---
+# Permettre aux services de faire des requêtes DNS
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns-egress
+  namespace: ai-product-insights
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    # DNS vers kube-dns
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53

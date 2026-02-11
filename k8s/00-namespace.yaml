@@ -1,0 +1,9 @@
+# Namespace dédié pour l'application AI Product Insights
+# Isolement logique de tous les composants de l'application
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ai-product-insights
+  labels:
+    name: ai-product-insights
+    environment: production

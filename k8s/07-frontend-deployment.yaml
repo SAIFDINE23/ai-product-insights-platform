@@ -1,0 +1,123 @@
+# Deployment - React Frontend Dashboard
+# Interface utilisateur servie via Nginx
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dashboard-frontend
+  namespace: ai-product-insights
+  labels:
+    app: dashboard-frontend
+    tier: frontend
+spec:
+  replicas: 2  # 2 replicas pour la haute disponibilité du frontend
+  selector:
+    matchLabels:
+      app: dashboard-frontend
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  template:
+    metadata:
+      labels:
+        app: dashboard-frontend
+        tier: frontend
+      annotations:
+        description: "React Dashboard Frontend"
+    spec:
+      containers:
+        - name: dashboard-frontend
+          image: saifdine23/dashboard-frontend:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 5173
+              protocol: TCP
+          
+          # Variables d'environnement pour le frontend
+          env:
+            - name: VITE_API_BASE_URL
+              value: "http://stats-service:8000"
+
+          # Health checks
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 5173
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 5173
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 2
+
+          # Resources
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "128Mi"
+              cpu: "100m"
+
+          # Security context
+          securityContext:
+            readOnlyRootFilesystem: false  # Vite needs temp files
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+
+          volumeMounts:
+            - name: var-cache-nginx
+              mountPath: /var/cache/nginx
+            - name: var-run
+              mountPath: /var/run
+
+      # Volumes
+      volumes:
+        - name: var-cache-nginx
+          emptyDir: {}
+        - name: var-run
+          emptyDir: {}
+
+      # Affinity - distribution sur les nœuds
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - dashboard-frontend
+                topologyKey: kubernetes.io/hostname
+
+---
+# Service pour le Frontend
+apiVersion: v1
+kind: Service
+metadata:
+  name: dashboard-frontend
+  namespace: ai-product-insights
+  labels:
+    app: dashboard-frontend
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80  # External port
+      targetPort: 5173  # Vite dev server
+      protocol: TCP
+      name: http
+  selector:
+    app: dashboard-frontend

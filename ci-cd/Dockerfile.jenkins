@@ -1,0 +1,125 @@
+FROM jenkins/jenkins:lts
+
+# ============================================================================
+# JENKINS LTS PERSONALISÉ POUR CI/CD DOCKER + KUBERNETES
+# ============================================================================
+
+USER root
+
+# ============================================================================
+# INSTALLATION DES DÉPENDANCES SYSTÈME
+# ============================================================================
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    # Docker CLI (pour build images)
+    docker.io \
+    \
+    # Git (pour checkout repos)
+    git \
+    \
+    # Curl, wget (pour téléchargements)
+    curl \
+    wget \
+    \
+    # Compilation tools
+    build-essential \
+    \
+    # Python (pour scripts)
+    python3 \
+    python3-pip \
+    \
+    # jq (JSON parsing)
+    jq \
+    \
+    # OpenSSH client (pour Git SSH)
+    openssh-client \
+    \
+    # Utilities
+    unzip \
+    zip \
+    vim \
+    nano \
+    ca-certificates \
+    \
+    && rm -rf /var/lib/apt/lists/*
+
+# ============================================================================
+# INSTALLATION TRIVY (Security scanning)
+# ============================================================================
+
+RUN curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+
+# ============================================================================
+# INSTALLATION KUBECTL (Kubernetes deployment)
+# ============================================================================
+
+RUN curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" && \
+    chmod +x kubectl && \
+    mv kubectl /usr/local/bin/
+
+# ============================================================================
+# INSTALLATION KIND (Optional - pour tests locaux)
+# ============================================================================
+
+RUN curl -Lo /usr/local/bin/kind https://kind.sigs.k8s.io/dl/v0.23.0/kind-linux-amd64 && \
+    chmod +x /usr/local/bin/kind
+
+# ============================================================================
+# INSTALLATION HELM (Optional - pour déploiements avancés)
+# ============================================================================
+
+RUN curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+# ============================================================================
+# PERMISSIONS DOCKER SOCKET
+# ============================================================================
+
+RUN groupadd -g 999 docker-host 2>/dev/null || true && \
+    usermod -aG docker-host jenkins 2>/dev/null || true
+
+# ============================================================================
+# INSTALLATION PLUGINS JENKINS (via plugins.txt)
+# ============================================================================
+
+COPY plugins.txt /usr/share/jenkins/ref/plugins.txt
+RUN jenkins-plugin-cli -f /usr/share/jenkins/ref/plugins.txt
+
+# ============================================================================
+# CONFIGURATION JENKINS
+# ============================================================================
+
+# Groovy startup script pour configuration automatique
+COPY init.groovy.d/ /usr/share/jenkins/ref/init.groovy.d/
+
+# ============================================================================
+# VARIABLES D'ENVIRONNEMENT
+# ============================================================================
+
+ENV JENKINS_JAVA_OPTS="-Xmx1g -Xms512m"
+
+# ============================================================================
+# CLEANUP
+# ============================================================================
+
+RUN apt-get clean && \
+    rm -rf /tmp/* /var/tmp/*
+
+# ============================================================================
+# UTILISATION
+# ============================================================================
+
+USER jenkins
+
+EXPOSE 8080 50000
+
+# ============================================================================
+# VÉRIFICATION
+# ============================================================================
+
+RUN echo "✓ Docker CLI (check)" && \
+    (command -v docker >/dev/null && docker --version || echo "Docker CLI non disponible au build") && \
+    echo "✓ Trivy installed" && \
+    trivy --version && \
+    echo "✓ kubectl installed" && \
+    kubectl version --client && \
+    echo "✓ Jenkins plugins configured"

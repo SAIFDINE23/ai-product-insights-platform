@@ -1,0 +1,56 @@
+# ============================================================================
+# JENKINS CI/CD - .gitignore
+# ============================================================================
+
+# Jenkins Data (ne pas commiter les données persistantes)
+jenkins_home/
+jenkins_cache/
+
+# Logs
+*.log
+jenkins-*.log
+
+# Secrets and Credentials
+secrets/
+.credentials
+credentials.xml
+.kube/
+kubeconfig
+
+# Build artifacts
+build/
+dist/
+*.jar
+*.war
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+env/
+
+# Docker
+.dockerignore
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# OS
+.DS_Store
+Thumbs.db

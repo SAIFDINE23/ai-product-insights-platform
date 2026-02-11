@@ -1,0 +1,84 @@
+# ============================================================================
+# JENKINS PLUGINS LIST
+# ============================================================================
+# Format: plugin-name (latest)
+
+# ============================================================================
+# CORE PLUGINS
+# ============================================================================
+mailer
+matrix-auth
+workflow-aggregator
+workflow-api
+workflow-basic-steps
+workflow-cps
+workflow-cps-global-lib
+workflow-durable-task-step
+workflow-job
+workflow-multibranch
+workflow-scm-step
+workflow-step-api
+workflow-support
+
+# ============================================================================
+# GIT & SOURCE CONTROL
+# ============================================================================
+git
+github
+github-branch-source
+gitlab-plugin
+
+# ============================================================================
+# DOCKER & CONTAINER
+# ============================================================================
+docker-plugin
+docker-commons
+docker-workflow
+
+# ============================================================================
+# SECURITY & CREDENTIALS
+# ============================================================================
+credentials
+credentials-binding
+ssh-credentials
+plain-credentials
+
+# ============================================================================
+# KUBERNETES & DEPLOYMENT
+# ============================================================================
+kubernetes
+kubernetes-cli
+
+# ============================================================================
+# BUILD & ANALYSIS
+# ============================================================================
+pipeline-build-step
+pipeline-input-step
+pipeline-model-api
+pipeline-model-definition
+pipeline-model-extensions
+pipeline-stage-step
+pipeline-stage-view
+
+# ============================================================================
+# NOTIFICATIONS & INTEGRATION
+# ============================================================================
+slack
+email-ext
+
+# ============================================================================
+# UTILITIES
+# ============================================================================
+ansicolor
+timestamper
+log-parser
+ws-cleanup
+groovy
+script-security
+
+# ============================================================================
+# MONITORING & PERFORMANCE
+# ============================================================================
+metrics
+performance
+prometheus

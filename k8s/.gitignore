@@ -1,0 +1,149 @@
+# .gitignore pour le dossier k8s/
+
+# Fichiers temporaires
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs et outputs
+*.log
+logs/
+*.out
+
+# Fichiers générés
+manifests.yaml
+manifests-*.yaml
+kubeseal-*.json
+trivy-results.sarif
+kubesec-report.json
+
+# Configuration locale
+.env.local
+.env.*.local
+secrets.local.yaml
+
+# Kubeconfig locaux (IMPORTANT: Ne pas committer!)
+.kube/
+kubeconfig
+kubeconfig.*.yaml
+
+# Helm generated
+helm-releases/
+Chart.lock
+charts/*/Chart.lock
+
+# Kustomize build outputs
+kustomize-build/
+overlays/*/kustomization.yaml.lock
+
+# Scripts temporaires
+*.sh.bak
+deploy.sh.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node modules (si tests locaux)
+node_modules/
+package-lock.json
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+
+# Secrets (CRITICIAL!)
+*secret*.yaml
+*secret*.yml
+*credentials*.yaml
+*credentials*.yml
+*password*.yaml
+*password*.yml
+*token*.yaml
+*token*.yml
+sealed-*.yaml
+.env.prod
+.env.production
+
+# Fichiers de configuration sensibles
+values-prod.yaml
+values-prod.yml
+overlays/prod/secrets.yaml
+overlays/prod/.env
+
+# Certificats SSL (s'ils sont générés localement)
+*.crt
+*.key
+*.pem
+*.pfx
+
+# Fichiers lock
+*.lock
+*.lock.yaml
+
+# Coverage reports
+coverage/
+*.coverage
+
+# Builds locaux
+build/
+dist/
+*.egg-info/
+
+# VS Code Extensions (localement)
+.vscode/extensions.json
+
+# Fichiers macOS
+.AppleDouble
+.LSOverride
+._*
+
+# Fichiers Windows
+ehthumbs.db
+desktop.ini
+
+# Artifacts CI/CD
+artifacts/
+.github/workflows/*/output
+
+# Terraform (si utilisé)
+*.tfstate
+*.tfstate.*
+.terraform/
+
+# Vagrant
+.vagrant/
+*.box
+
+# Docker build cache (local)
+.docker/
+
+# Valeurs locales pour tests
+*.local.yaml
+*.test.yaml
+
+# Ignored patterns for security
+.aws/credentials
+.aws/config
+.ssh/
+GPG*
+
+# Ne pas ignorer ces fichiers importants:
+# !00-namespace.yaml
+# !01-secrets.yaml (mais adapter les valeurs!)
+# !kustomization.yaml
+# !deploy.sh
+# !/README.md

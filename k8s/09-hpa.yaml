@@ -1,0 +1,176 @@
+# HorizontalPodAutoscaler - Auto-scaling des services backend basé sur le CPU
+# Augmente automatiquement le nombre de replicas quand la charge augmente
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: scraper-service-hpa
+  namespace: ai-product-insights
+  labels:
+    app: scraper-service
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: scraper-service
+  minReplicas: 1
+  maxReplicas: 3  # Échelle jusqu'à 3 instances
+  metrics:
+    # Auto-scaling sur l'utilisation CPU
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70  # Déclenche le scale-up à 70% d'utilisation CPU
+    # Auto-scaling sur la mémoire (optionnel)
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300  # Attendre 5 min avant de descendre
+      policies:
+        - type: Percent
+          value: 50  # Réduire de 50% à la fois
+          periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 0  # Scale-up immédiat si besoin
+      policies:
+        - type: Percent
+          value: 100  # Doubler le nombre de replicas
+          periodSeconds: 30
+        - type: Pods
+          value: 1
+          periodSeconds: 60
+
+---
+# HPA pour AI Analysis Service
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: ai-analysis-service-hpa
+  namespace: ai-product-insights
+  labels:
+    app: ai-analysis-service
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ai-analysis-service
+  minReplicas: 1
+  maxReplicas: 3
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 75  # Seuil un peu plus haut pour le traitement IA
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 85
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Percent
+          value: 50
+          periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+        - type: Percent
+          value: 100
+          periodSeconds: 30
+
+---
+# HPA pour Stats Service
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: stats-service-hpa
+  namespace: ai-product-insights
+  labels:
+    app: stats-service
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: stats-service
+  minReplicas: 1
+  maxReplicas: 3
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Percent
+          value: 50
+          periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+        - type: Percent
+          value: 100
+          periodSeconds: 30
+
+---
+# HPA pour le Frontend Dashboard
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: dashboard-frontend-hpa
+  namespace: ai-product-insights
+  labels:
+    app: dashboard-frontend
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: dashboard-frontend
+  minReplicas: 2  # Minimum 2 pour la haute disponibilité
+  maxReplicas: 5  # Peut escalader jusqu'à 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 65  # Seuil plus bas pour le frontend (trafic user-facing)
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 75
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Percent
+          value: 50
+          periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+        - type: Percent
+          value: 100
+          periodSeconds: 30

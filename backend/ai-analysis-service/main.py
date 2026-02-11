@@ -16,11 +16,14 @@ import nltk
 # Initialize FastAPI app
 app = FastAPI(title="AI Analysis Service", version="0.1.0")
 
-# Download VADER lexicon on startup
+# Configure NLTK to use /tmp for data
+nltk.data.path.append('/tmp/nltk_data')
+
+# Download VADER lexicon on startup to /tmp
 try:
     nltk.data.find('vader_lexicon')
 except LookupError:
-    nltk.download('vader_lexicon')
+    nltk.download('vader_lexicon', download_dir='/tmp/nltk_data')
 
 # Initialize VADER sentiment analyzer
 sia = SentimentIntensityAnalyzer()

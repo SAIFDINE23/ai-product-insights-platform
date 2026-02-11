@@ -1,0 +1,107 @@
+# kustomization.yaml - Kustomize configuration pour paramétrer les déploiements
+# Permet d'utiliser les mêmes manifests pour dev/staging/prod avec des variations
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: ai-product-insights
+
+# Liste les ressources à inclure
+resources:
+  - 00-namespace.yaml
+  - 01-secrets.yaml
+  - 02-postgres-pvc.yaml
+  - 03-postgres-deployment.yaml
+  - 04-scraper-service.yaml
+  - 05-ai-analysis-service.yaml
+  - 06-stats-service.yaml
+  - 07-frontend-deployment.yaml
+  - 08-ingress.yaml
+  - 09-hpa.yaml
+  - 10-network-policies.yaml
+
+# Ajoute des labels à toutes les ressources
+commonLabels:
+  app.kubernetes.io/name: ai-product-insights
+  app.kubernetes.io/version: "1.0.0"
+  app.kubernetes.io/managed-by: kustomize
+
+# Ajoute des annotations à toutes les ressources
+commonAnnotations:
+  deployment-tool: "kustomize"
+  contact: "saif.dine@example.com"
+
+# Patches pour modifier les ressources
+patchesStrategicMerge:
+  # Exemple: augmenter les replicas en production
+  # - deployment-replicas-patch.yaml
+
+# Patches JSON6902 pour modifications plus complexes
+patchesJson6902:
+  # Exemple: changer l'image dans production
+  # - target:
+  #     group: apps
+  #     version: v1
+  #     kind: Deployment
+  #     name: stats-service
+  #   patch: |-
+  #     - op: replace
+  #       path: /spec/template/spec/containers/0/image
+  #       value: saifdine23/stats-service:production
+
+# Variables de substitution
+vars:
+  - name: NAMESPACE
+    objref:
+      kind: Namespace
+      name: ai-product-insights
+      apiVersion: v1
+    fieldref:
+      fieldpath: metadata.name
+
+# ConfigMaps générées depuis des fichiers
+configMapGenerator:
+  - name: app-config-additional
+    literals:
+      - DEPLOYMENT_ENV=development
+      - VERSION=1.0.0
+
+# Secrets générées (attention: en base64seulement, pas de chiffrement!)
+secretGenerator:
+  - name: app-secrets
+    literals:
+      - RAILS_MASTER_KEY=changeme
+
+# Images à utiliser (permet de changer les versions facilement)
+images:
+  - name: saifdine23/scraper-service
+    newTag: "latest"
+  - name: saifdine23/ai-analysis-service
+    newTag: "latest"
+  - name: saifdine23/stats-service
+    newTag: "latest"
+  - name: saifdine23/dashboard-frontend
+    newTag: "latest"
+  - name: postgres
+    newTag: "16-alpine"
+
+# Replicas par défaut
+replicas:
+  - name: postgres
+    count: 1
+  - name: scraper-service
+    count: 1
+  - name: ai-analysis-service
+    count: 1
+  - name: stats-service
+    count: 1
+  - name: dashboard-frontend
+    count: 2
+
+# Options de configuration globales
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Préfixes/suffixes pour les noms de ressources (optionnel)
+namePrefix: ""  # prod-
+nameSuffix: ""  # -prod

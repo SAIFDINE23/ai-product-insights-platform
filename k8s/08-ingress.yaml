@@ -1,0 +1,112 @@
+# Ingress - Expose le frontend et les APIs en externe
+# Routage HTTP/HTTPS vers les services internes
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ai-product-insights-ingress
+  namespace: ai-product-insights
+  labels:
+    app: ai-product-insights
+  annotations:
+    # Nginx annotations pour la configuration du reverse proxy
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+    nginx.ingress.kubernetes.io/cors-allow-credentials: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+spec:
+  ingressClassName: nginx
+  rules:
+    # Route pour le frontend (racine)
+    - host: localhost
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: dashboard-frontend
+                port:
+                  number: 80
+    
+    # Routes pour les APIs backend
+    - host: localhost
+      http:
+        paths:
+          # Stats Service API
+          - path: /api/stats
+            pathType: Prefix
+            backend:
+              service:
+                name: stats-service
+                port:
+                  number: 8000
+          
+          # Scraper Service API (optionnel pour debugging)
+          - path: /api/scraper
+            pathType: Prefix
+            backend:
+              service:
+                name: scraper-service
+                port:
+                  number: 8000
+          
+          # AI Analysis Service API (optionnel pour debugging)
+          - path: /api/ai-analysis
+            pathType: Prefix
+            backend:
+              service:
+                name: ai-analysis-service
+                port:
+                  number: 8000
+
+---
+# Ingress alternatif avec domaines séparés (pour production)
+# À activer si vous avez des domaines distincts
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ai-product-insights-ingress-domains
+  namespace: ai-product-insights
+  labels:
+    app: ai-product-insights
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"  # Utiliser si cert-manager est installé
+spec:
+  ingressClassName: nginx
+  # TLS section - à décommenter avec un certificat SSL valid
+  # tls:
+  #   - hosts:
+  #       - api.yourdomain.com
+  #       - dashboard.yourdomain.com
+  #     secretName: ai-product-insights-tls
+  rules:
+    # Dashboard sur dashboard.yourdomain.com
+    - host: dashboard.yourdomain.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: dashboard-frontend
+                port:
+                  number: 80
+    
+    # Stats API sur api.yourdomain.com
+    - host: api.yourdomain.com
+      http:
+        paths:
+          - path: /stats
+            pathType: Prefix
+            backend:
+              service:
+                name: stats-service
+                port:
+                  number: 8000
