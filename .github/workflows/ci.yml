@@ -1,0 +1,129 @@
+name: CI - Build, Scan, Push, Deploy
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+env:
+  DOCKERHUB_USERNAME: saifdine23
+  IMAGE_SCRAPER: saifdine23/scraper
+  IMAGE_AI_ANALYSIS: saifdine23/ai-analysis
+  IMAGE_STATS: saifdine23/stats
+  IMAGE_FRONTEND: saifdine23/frontend
+
+jobs:
+  build_scan_push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build images (local)
+        run: |
+          docker build -t $IMAGE_SCRAPER:latest backend/scraper-service
+          docker build -t $IMAGE_AI_ANALYSIS:latest backend/ai-analysis-service
+          docker build -t $IMAGE_STATS:latest backend/stats-service
+          docker build -t $IMAGE_FRONTEND:latest frontend/dashboard-react
+
+      - name: Trivy Scan - Scraper
+        uses: aquasecurity/trivy-action@0.23.0
+        with:
+          image-ref: ${{ env.IMAGE_SCRAPER }}:latest
+          format: sarif
+          output: trivy-scraper.sarif
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+
+      - name: Trivy Scan - AI Analysis
+        uses: aquasecurity/trivy-action@0.23.0
+        with:
+          image-ref: ${{ env.IMAGE_AI_ANALYSIS }}:latest
+          format: sarif
+          output: trivy-ai-analysis.sarif
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+
+      - name: Trivy Scan - Stats
+        uses: aquasecurity/trivy-action@0.23.0
+        with:
+          image-ref: ${{ env.IMAGE_STATS }}:latest
+          format: sarif
+          output: trivy-stats.sarif
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+
+      - name: Trivy Scan - Frontend
+        uses: aquasecurity/trivy-action@0.23.0
+        with:
+          image-ref: ${{ env.IMAGE_FRONTEND }}:latest
+          format: sarif
+          output: trivy-frontend.sarif
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+
+      - name: Upload Trivy results (SARIF)
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: .
+
+      - name: Push images
+        run: |
+          docker push $IMAGE_SCRAPER:latest
+          docker push $IMAGE_AI_ANALYSIS:latest
+          docker push $IMAGE_STATS:latest
+          docker push $IMAGE_FRONTEND:latest
+
+  deploy_kubernetes:
+    runs-on: ubuntu-latest
+    needs: [build_scan_push]
+    if: ${{ secrets.KUBE_CONFIG != '' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: v1.30.0
+
+      - name: Configure kubeconfig
+        run: |
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > $HOME/.kube/config
+
+      - name: Deploy manifests
+        run: |
+          kubectl apply -f infra/kubernetes/namespace.yaml
+          kubectl apply -f infra/kubernetes/postgres-secret.yaml
+          kubectl apply -f infra/kubernetes/postgres-pv-pvc.yaml
+          kubectl apply -f infra/kubernetes/configmaps.yaml
+          kubectl apply -f infra/kubernetes/postgres-deployment.yaml
+          kubectl apply -f infra/kubernetes/scraper-deployment.yaml
+          kubectl apply -f infra/kubernetes/ai-analysis-deployment.yaml
+          kubectl apply -f infra/kubernetes/stats-deployment.yaml
+          kubectl apply -f infra/kubernetes/frontend-deployment.yaml
+          kubectl apply -f infra/kubernetes/ingress.yaml
+
+      - name: Verify rollout
+        run: |
+          kubectl -n ai-product-insights rollout status deployment/postgres --timeout=180s
+          kubectl -n ai-product-insights rollout status deployment/scraper-service --timeout=180s
+          kubectl -n ai-product-insights rollout status deployment/ai-analysis-service --timeout=180s
+          kubectl -n ai-product-insights rollout status deployment/stats-service --timeout=180s
+          kubectl -n ai-product-insights rollout status deployment/dashboard-frontend --timeout=180s
