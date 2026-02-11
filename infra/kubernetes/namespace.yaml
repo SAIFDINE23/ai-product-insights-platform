@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ai-product-insights
+  labels:
+    app.kubernetes.io/name: ai-product-insights
+    app.kubernetes.io/part-of: ai-product-insights

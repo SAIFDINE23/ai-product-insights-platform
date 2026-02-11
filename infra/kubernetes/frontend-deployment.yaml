@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dashboard-frontend
+  namespace: ai-product-insights
+  labels:
+    app: dashboard-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dashboard-frontend
+  template:
+    metadata:
+      labels:
+        app: dashboard-frontend
+    spec:
+      containers:
+        - name: dashboard-frontend
+          image: product_insights-dashboard-react:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5173
+          env:
+            - name: VITE_API_BASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: VITE_API_BASE_URL
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dashboard-frontend
+  namespace: ai-product-insights
+spec:
+  type: ClusterIP
+  selector:
+    app: dashboard-frontend
+  ports:
+    - port: 80
+      targetPort: 5173

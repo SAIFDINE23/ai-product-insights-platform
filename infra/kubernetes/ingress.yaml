@@ -1,0 +1,42 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ai-product-insights-ingress
+  namespace: ai-product-insights
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/use-regex: "true"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: localhost
+      http:
+        paths:
+          - path: /()(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: dashboard-frontend
+                port:
+                  number: 80
+          - path: /scraper(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: scraper-service
+                port:
+                  number: 8000
+          - path: /ai-analysis(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: ai-analysis-service
+                port:
+                  number: 8000
+          - path: /stats(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: stats-service
+                port:
+                  number: 8000

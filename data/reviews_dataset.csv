@@ -1,0 +1,101 @@
+id,product_name,review_text,rating,channel,created_at
+1,Laptop Pro 15,Excellent laptop! Fast processor and great display quality. Highly recommend!,5,email,2024-01-15 10:23:45
+2,Wireless Mouse,Good but sometimes disconnects,3,email,2024-01-16 14:45:12
+3,USB-C Cable,Broke after 2 weeks of normal use. Very disappointed.,1,sms,2024-01-17 08:12:30
+4,Monitor 4K,Amazing picture quality at this price point. Very happy!,5,qr,2024-01-18 16:30:00
+5,Mechanical Keyboard,The switches are a bit loud but feel great to type on,4,email,2024-01-19 11:22:15
+6,Laptop Pro 15,Not as good as the previous model. Battery life disappointing.,2,sms,2024-01-20 09:45:22
+7,USB Hub,Perfect for my setup. Works seamlessly with multiple devices.,5,email,2024-01-21 13:18:45
+8,External SSD,Fast transfer speeds but overheats after prolonged use,3,qr,2024-01-22 15:00:30
+9,Monitor 4K,Decent monitor but no HDMI 2.1 support,3,email,2024-01-23 10:30:15
+10,Wireless Charger,Great convenience. Charges my phone quickly.,4,sms,2024-01-24 12:45:00
+11,Laptop Pro 15,Crashed twice in the first week. Customer support was unhelpful.,1,email,2024-01-25 14:22:30
+12,Mechanical Keyboard,Love the build quality and RGB lighting options,5,qr,2024-01-26 08:15:45
+13,USB-C Cable,Actually pretty durable. Still working after 3 months.,4,email,2024-01-27 16:30:22
+14,External SSD,Data corruption issue after 2 months. Lost important files.,1,sms,2024-01-28 11:00:30
+15,Monitor 4K,Perfect for video editing. Colors are accurate.,5,email,2024-01-29 13:45:15
+16,Wireless Mouse,Battery lasts only 2-3 days. Not ideal for daily use.,2,qr,2024-01-30 09:22:45
+17,USB Hub,One port stopped working after 4 months.,2,email,2024-01-31 15:18:00
+18,Laptop Pro 15,Great performance but gets hot during gaming,4,sms,2024-02-01 10:30:30
+19,Mechanical Keyboard,Keys started sticking after 6 months.,2,email,2024-02-02 12:45:15
+20,Wireless Charger,Doesn't work with some phone cases. Otherwise good.,3,qr,2024-02-03 14:00:45
+21,Monitor 4K,Too expensive for what it offers. Budget option is better.,2,email,2024-02-04 16:22:30
+22,USB-C Cable,Finally a cable that doesn't break! Worth the price.,5,sms,2024-02-05 11:30:00
+23,External SSD,Best external storage I've ever owned. Highly recommend!,5,email,2024-02-06 13:18:45
+24,Laptop Pro 15,Amazing laptop for work and creative tasks.,5,qr,2024-02-07 09:45:30
+25,Wireless Mouse,Works perfectly. Great for productivity.,4,email,2024-02-08 15:00:15
+26,USB Hub,Good build quality. All ports work great.,4,sms,2024-02-09 10:22:45
+27,Monitor 4K,The stand is wobbly. Otherwise great monitor.,3,email,2024-02-10 12:30:00
+28,Mechanical Keyboard,Best keyboard I've ever used!,5,qr,2024-02-11 14:45:15
+29,USB-C Cable,Works fine for charging but slow data transfer.,2,email,2024-02-12 16:18:30
+30,Wireless Charger,Perfect for nightstand. Charges efficiently.,4,sms,2024-02-13 11:00:45
+31,Laptop Pro 15,Good but overpriced compared to competitors.,2,email,2024-02-14 13:22:15
+32,External SSD,Reliable and fast. Perfect for backup.,4,qr,2024-02-15 09:30:00
+33,Monitor 4K,Excellent for gaming. No lag or ghosting.,5,email,2024-02-16 15:45:30
+34,Wireless Mouse,Comfortable to hold for long periods.,4,sms,2024-02-17 10:18:45
+35,USB Hub,Stopped working after 3 months.,1,email,2024-02-18 12:00:30
+36,Mechanical Keyboard,Switches are inconsistent. Some feel mushy.,2,qr,2024-02-19 14:30:15
+37,Monitor 4K,Great for photo editing. Color accuracy is excellent.,5,email,2024-02-20 16:45:00
+38,USB-C Cable,Durable and reliable. Using for 6 months without issues.,4,sms,2024-02-21 11:22:30
+39,Laptop Pro 15,Thermal management could be better.,3,email,2024-02-22 13:00:45
+40,Wireless Charger,Dead on arrival. Returned it.,1,qr,2024-02-23 09:45:15
+41,External SSD,Fast and reliable. Worth every penny.,5,email,2024-02-24 15:18:00
+42,USB Hub,Some ports are loose. Quality control issue?,2,sms,2024-02-25 10:30:30
+43,Monitor 4K,Perfect for my workspace. No complaints.,5,email,2024-02-26 12:45:45
+44,Mechanical Keyboard,Click clack sounds are satisfying!,4,qr,2024-02-27 14:22:15
+45,Wireless Mouse,Tracking is accurate and responsive.,4,email,2024-02-28 16:00:00
+46,USB-C Cable,Not as advertised. Slower than expected.,2,sms,2024-02-29 11:30:30
+47,Laptop Pro 15,Updated drivers fixed my issues. Great now!,4,email,2024-03-01 13:45:15
+48,Wireless Charger,Very convenient. Recommend to all!,5,qr,2024-03-02 09:18:45
+49,Monitor 4K,Some backlight bleeding on edges,3,email,2024-03-03 15:00:00
+50,External SSD,Had one failure but support replaced it quickly.,4,sms,2024-03-04 10:22:30
+51,USB Hub,Perfect for my office setup.,5,email,2024-03-05 12:30:45
+52,Mechanical Keyboard,Spacebar feels different from other keys,2,qr,2024-03-06 14:45:15
+53,Monitor 4K,Best purchase this year!,5,email,2024-03-07 16:18:00
+54,Wireless Mouse,Right-click button is loose,2,sms,2024-03-08 11:00:30
+55,USB-C Cable,Still going strong after 1 year!,5,email,2024-03-09 13:22:45
+56,Laptop Pro 15,Fan noise is noticeable but not annoying.,3,qr,2024-03-10 09:30:15
+57,External SSD,Enclosure is fragile. Be careful.,2,email,2024-03-11 15:45:00
+58,Wireless Charger,Stopped charging after 5 months.,1,sms,2024-03-12 10:18:30
+59,Monitor 4K,Excellent value for money!,5,email,2024-03-13 12:00:45
+60,USB Hub,One of the best purchases I've made.,4,qr,2024-03-14 14:30:00
+61,Mechanical Keyboard,RGB lighting is a nice touch.,4,email,2024-03-15 16:45:15
+62,USB-C Cable,Quality feels premium.,4,sms,2024-03-16 11:22:30
+63,Laptop Pro 15,Great for video editing and rendering.,5,email,2024-03-17 13:00:45
+64,Wireless Mouse,Perfect ergonomics for my hand size.,4,qr,2024-03-18 09:45:00
+65,Monitor 4K,Can't imagine working without it now.,5,sms,2024-03-19 15:18:30
+66,External SSD,Reliable backup solution.,5,email,2024-03-20 10:30:15
+67,Wireless Charger,Stylish and functional.,4,email,2024-03-21 12:45:00
+68,USB Hub,Does exactly what it promises.,4,qr,2024-03-22 14:22:45
+69,Mechanical Keyboard,Worth the investment.,5,email,2024-03-23 16:00:30
+70,USB-C Cable,No fraying after extended use.,4,sms,2024-03-24 11:30:45
+71,Laptop Pro 15,Excellent all-around laptop.,5,email,2024-03-25 13:45:15
+72,Monitor 4K,Shipped damaged but replacement arrived quickly.,4,qr,2024-03-26 09:18:00
+73,Wireless Mouse,Surprisingly good for the price.,4,email,2024-03-27 15:00:30
+74,External SSD,Fast and reliable for backups.,5,sms,2024-03-28 10:22:15
+75,USB Hub,All ports work as expected.,4,email,2024-03-29 12:30:45
+76,Mechanical Keyboard,Keycaps are premium quality.,5,qr,2024-03-30 14:45:00
+77,Monitor 4K,Colors look natural and vibrant.,5,email,2024-03-31 16:18:30
+78,Wireless Charger,Heats up during charging.,2,sms,2024-04-01 11:00:00
+79,USB-C Cable,Best cable I've ever owned.,5,email,2024-04-02 13:22:45
+80,Laptop Pro 15,Keyboard is comfortable for long typing sessions.,4,qr,2024-04-03 09:30:15
+81,Wireless Mouse,Connection drops occasionally.,2,email,2024-04-04 15:45:00
+82,Monitor 4K,No dead pixels. Perfect screen.,5,sms,2024-04-05 10:18:30
+83,External SSD,Fast reads and writes.,5,email,2024-04-06 12:00:45
+84,USB Hub,Compact and efficient.,4,qr,2024-04-07 14:30:00
+85,Mechanical Keyboard,Sound quality is pristine.,5,email,2024-04-08 16:45:15
+86,Monitor 4K,Great investment for productivity.,5,sms,2024-04-09 11:22:30
+87,Wireless Charger,Good but pricey.,3,email,2024-04-10 13:00:45
+88,USB-C Cable,Reliable and durable product.,4,qr,2024-04-11 09:45:00
+89,Laptop Pro 15,Worth every cent spent on it.,5,email,2024-04-12 15:18:30
+90,External SSD,Best external drive available.,5,sms,2024-04-13 10:30:15
+91,Wireless Mouse,Smooth and precise tracking.,4,email,2024-04-14 12:45:00
+92,USB Hub,Essential accessory for my setup.,5,qr,2024-04-15 14:22:45
+93,Monitor 4K,Superb display quality.,5,email,2024-04-16 16:00:30
+94,Mechanical Keyboard,Every keystroke feels premium.,5,sms,2024-04-17 11:30:45
+95,USB-C Cable,Outstanding build quality.,5,email,2024-04-18 13:45:15
+96,Laptop Pro 15,Performance is unmatched.,5,qr,2024-04-19 09:18:00
+97,Monitor 4K,Perfect for streaming and gaming.,5,email,2024-04-20 15:00:30
+98,Wireless Charger,Convenient and practical.,4,sms,2024-04-21 10:22:15
+99,External SSD,Speeds are incredible.,5,email,2024-04-22 12:30:45
+100,USB Hub,Excellent value for money.,4,qr,2024-04-23 14:45:00

@@ -1,0 +1,88 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: api-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: app_user
+      POSTGRES_PASSWORD: app_password
+      POSTGRES_DB: product_insights
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app-net
+
+  scraper-service:
+    build:
+      context: ./backend/scraper-service
+    container_name: scraper-service
+    restart: unless-stopped
+    environment:
+      SERVICE_NAME: scraper-service
+      DATABASE_URL: postgresql://app_user:app_password@postgres:5432/product_insights
+    ports:
+      - "8001:8000"
+    depends_on:
+      - postgres
+    networks:
+      - app-net
+
+  ai-analysis-service:
+    build:
+      context: ./backend/ai-analysis-service
+    container_name: ai-analysis-service
+    restart: unless-stopped
+    environment:
+      SERVICE_NAME: ai-analysis-service
+      DATABASE_URL: postgresql://app_user:app_password@postgres:5432/product_insights
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: product_insights
+      DB_USER: app_user
+      DB_PASSWORD: app_password
+    ports:
+      - "8002:8000"
+    depends_on:
+      - postgres
+    networks:
+      - app-net
+
+  stats-service:
+    build:
+      context: ./backend/stats-service
+    container_name: stats-service
+    restart: unless-stopped
+    environment:
+      SERVICE_NAME: stats-service
+      DATABASE_URL: postgresql://app_user:app_password@postgres:5432/product_insights
+    ports:
+      - "8003:8000"
+    depends_on:
+      - postgres
+    networks:
+      - app-net
+
+  dashboard-react:
+    build:
+      context: ./frontend/dashboard-react
+    container_name: dashboard-react
+    restart: unless-stopped
+    environment:
+      VITE_API_BASE_URL: http://localhost:8003
+    ports:
+      - "5173:5173"
+    depends_on:
+      - stats-service
+    networks:
+      - app-net
+
+volumes:
+  postgres_data:
+
+networks:
+  app-net:
+    driver: bridge

@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: ai-product-insights
+data:
+  DB_HOST: postgres
+  DB_PORT: "5432"
+  DB_NAME: product_insights
+  # Frontend config
+  VITE_API_BASE_URL: http://localhost
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: service-config
+  namespace: ai-product-insights
+data:
+  SCRAPER_SERVICE_NAME: scraper-service
+  AI_ANALYSIS_SERVICE_NAME: ai-analysis-service
+  STATS_SERVICE_NAME: stats-service

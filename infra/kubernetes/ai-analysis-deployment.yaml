@@ -1,0 +1,69 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-analysis-service
+  namespace: ai-product-insights
+  labels:
+    app: ai-analysis-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ai-analysis-service
+  template:
+    metadata:
+      labels:
+        app: ai-analysis-service
+    spec:
+      containers:
+        - name: ai-analysis-service
+          image: product_insights-ai-analysis-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          env:
+            - name: SERVICE_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: service-config
+                  key: AI_ANALYSIS_SERVICE_NAME
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: DB_HOST
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: DB_PORT
+            - name: DB_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: DB_NAME
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_USER
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_PASSWORD
+            - name: ENABLE_LLM
+              value: "false"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ai-analysis-service
+  namespace: ai-product-insights
+spec:
+  type: ClusterIP
+  selector:
+    app: ai-analysis-service
+  ports:
+    - port: 8000
+      targetPort: 8000
