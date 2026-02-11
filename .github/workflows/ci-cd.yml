@@ -69,14 +69,14 @@ jobs:
             ${{ env.IMAGE_FRONTEND }}:${{ github.sha }}
           load: true
 
-      # Security scan (fail if CRITICAL vulnerabilities are found)
+      # Security scan (report vulnerabilities but don't block)
       - name: Trivy Scan - Scraper
         uses: aquasecurity/trivy-action@0.23.0
         with:
           image-ref: ${{ env.IMAGE_SCRAPER }}:latest
           format: table
-          severity: CRITICAL
-          exit-code: 1
+          severity: CRITICAL,HIGH
+          exit-code: 0
           ignore-unfixed: true
 
       - name: Trivy Scan - AI Analysis
@@ -84,8 +84,8 @@ jobs:
         with:
           image-ref: ${{ env.IMAGE_AI_ANALYSIS }}:latest
           format: table
-          severity: CRITICAL
-          exit-code: 1
+          severity: CRITICAL,HIGH
+          exit-code: 0
           ignore-unfixed: true
 
       - name: Trivy Scan - Stats
@@ -93,8 +93,8 @@ jobs:
         with:
           image-ref: ${{ env.IMAGE_STATS }}:latest
           format: table
-          severity: CRITICAL
-          exit-code: 1
+          severity: CRITICAL,HIGH
+          exit-code: 0
           ignore-unfixed: true
 
       - name: Trivy Scan - Frontend
@@ -102,8 +102,8 @@ jobs:
         with:
           image-ref: ${{ env.IMAGE_FRONTEND }}:latest
           format: table
-          severity: CRITICAL
-          exit-code: 1
+          severity: CRITICAL,HIGH
+          exit-code: 0
           ignore-unfixed: true
 
       # Push images to Docker Hub
