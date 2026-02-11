@@ -5,11 +5,10 @@ on:
     branches: ["main"]
 
 env:
-  DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-  IMAGE_SCRAPER: ${{ secrets.DOCKERHUB_USERNAME }}/scraper
-  IMAGE_AI_ANALYSIS: ${{ secrets.DOCKERHUB_USERNAME }}/ai-analysis
-  IMAGE_STATS: ${{ secrets.DOCKERHUB_USERNAME }}/stats
-  IMAGE_FRONTEND: ${{ secrets.DOCKERHUB_USERNAME }}/frontend
+  IMAGE_SCRAPER: saifdine23/scraper
+  IMAGE_AI_ANALYSIS: saifdine23/ai-analysis
+  IMAGE_STATS: saifdine23/stats
+  IMAGE_FRONTEND: saifdine23/frontend
 
 jobs:
   build_scan_push:
