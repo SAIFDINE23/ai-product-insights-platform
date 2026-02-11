@@ -76,8 +76,9 @@ pipeline {
         K8S_NAMESPACE = "ai-product-insights"
         KUBECONFIG = "${WORKSPACE}/.kube/config"
         
-        // Docker buildkit
-        DOCKER_BUILDKIT = "1"
+        // Docker buildkit (désactivé pour éviter l'erreur buildx)
+        DOCKER_BUILDKIT = "0"
+        COMPOSE_DOCKER_CLI_BUILD = "0"
         
         // Colors for output
         GREEN = '\033[0;32m'
@@ -359,10 +360,10 @@ pipeline {
                 echo "${BLUE}PIPELINE POST ACTIONS${NC}"
                 echo "${BLUE}═══════════════════════════════════════════════════════${NC}"
                 
-                // Cleanup
+                // Cleanup (safe)
                 sh '''
                     echo "${YELLOW}Cleaning up...${NC}"
-                    docker system prune -af --volumes || true
+                    docker image prune -f || true
                     echo "${GREEN}✓ Cleanup completed${NC}"
                 '''
             }
