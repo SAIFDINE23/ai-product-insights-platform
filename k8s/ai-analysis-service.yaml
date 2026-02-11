@@ -1,0 +1,303 @@
+# ============================================================================
+# KUBERNETES DEPLOYMENT
+# AI Analysis Service avec Gemini API
+# ============================================================================
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-analysis-service
+  namespace: ai-product-insights
+  labels:
+    app: ai-analysis-service
+    version: v1
+spec:
+  replicas: 2  # 2 pods pour haute disponibilité
+  selector:
+    matchLabels:
+      app: ai-analysis-service
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  
+  template:
+    metadata:
+      labels:
+        app: ai-analysis-service
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+    
+    spec:
+      serviceAccountName: ai-analysis-service
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      
+      containers:
+      - name: ai-analysis-service
+        image: saifdine23/ai-analysis-service:latest
+        imagePullPolicy: Always
+        
+        ports:
+        - name: http
+          containerPort: 8000
+          protocol: TCP
+        
+        # ====================================================================
+        # VARIABLES D'ENVIRONNEMENT DEPUIS SECRETS
+        # ====================================================================
+        env:
+        # Gemini API Key (DEPUIS SECRET)
+        - name: GEMINI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: ai-analysis-secrets
+              key: GEMINI_API_KEY
+        
+        # Database (DEPUIS SECRET + CONFIG)
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: ai-analysis-config
+              key: DB_HOST
+        - name: DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: ai-analysis-config
+              key: DB_PORT
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: ai-analysis-config
+              key: DB_NAME
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: ai-analysis-secrets
+              key: DB_USER
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: ai-analysis-secrets
+              key: DB_PASSWORD
+        
+        # Application (CONFIG)
+        - name: SERVICE_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: ai-analysis-config
+              key: SERVICE_PORT
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: ai-analysis-config
+              key: LOG_LEVEL
+        - name: GEMINI_MODEL
+          valueFrom:
+            configMapKeyRef:
+              name: ai-analysis-config
+              key: GEMINI_MODEL
+        - name: GEMINI_MAX_RETRIES
+          valueFrom:
+            configMapKeyRef:
+              name: ai-analysis-config
+              key: GEMINI_MAX_RETRIES
+        - name: GEMINI_TIMEOUT
+          valueFrom:
+            configMapKeyRef:
+              name: ai-analysis-config
+              key: GEMINI_TIMEOUT
+        
+        # ====================================================================
+        # PROBES (Health checks)
+        # ====================================================================
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 2
+        
+        # ====================================================================
+        # RESSOURCES
+        # ====================================================================
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        
+        # ====================================================================
+        # SÉCURITÉ
+        # ====================================================================
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+              - ALL
+        
+        # ====================================================================
+        # VOLUMES
+        # ====================================================================
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        - name: cache
+          mountPath: /app/.cache
+      
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      - name: cache
+        emptyDir: {}
+      
+      # ====================================================================
+      # AFFINITY (Spread pods across nodes)
+      # ====================================================================
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - ai-analysis-service
+              topologyKey: kubernetes.io/hostname
+
+---
+# ============================================================================
+# SERVICE
+# ============================================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: ai-analysis-service
+  namespace: ai-product-insights
+  labels:
+    app: ai-analysis-service
+spec:
+  type: ClusterIP
+  selector:
+    app: ai-analysis-service
+  ports:
+  - name: http
+    port: 8000
+    targetPort: http
+    protocol: TCP
+
+---
+# ============================================================================
+# HORIZONTAL POD AUTOSCALER
+# ============================================================================
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: ai-analysis-service-hpa
+  namespace: ai-product-insights
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ai-analysis-service
+  minReplicas: 2
+  maxReplicas: 5
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+
+---
+# ============================================================================
+# SERVICE ACCOUNT (RBAC)
+# ============================================================================
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ai-analysis-service
+  namespace: ai-product-insights
+  labels:
+    app: ai-analysis-service
+
+---
+# ============================================================================
+# NETWORK POLICY (Security)
+# ============================================================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: ai-analysis-service-netpol
+  namespace: ai-product-insights
+spec:
+  podSelector:
+    matchLabels:
+      app: ai-analysis-service
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ai-product-insights
+    - podSelector:
+        matchLabels:
+          app: api-gateway
+    ports:
+    - protocol: TCP
+      port: 8000
+  egress:
+  # Allow DNS
+  - to:
+    - namespaceSelector: {}
+      podSelector:
+        matchLabels:
+          k8s-app: kube-dns
+    ports:
+    - protocol: UDP
+      port: 53
+  # Allow external HTTPS (pour Gemini API)
+  - to:
+    - namespaceSelector: {}
+    ports:
+    - protocol: TCP
+      port: 443
+  # Allow PostgreSQL
+  - to:
+    - podSelector:
+        matchLabels:
+          app: postgres
+    ports:
+    - protocol: TCP
+      port: 5432

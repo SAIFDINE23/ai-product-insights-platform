@@ -1,6 +1,6 @@
 """
 AI Analysis Service - FastAPI Microservice
-Analyzes customer reviews for sentiment and topic extraction.
+Analyzes customer reviews for sentiment and topic extraction using Google Gemini API.
 """
 
 import os
@@ -10,23 +10,19 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from nltk.sentiment import SentimentIntensityAnalyzer
-import nltk
+import google.generativeai as genai
+import json
 
 # Initialize FastAPI app
 app = FastAPI(title="AI Analysis Service", version="0.1.0")
 
-# Configure NLTK to use /tmp for data
-nltk.data.path.append('/tmp/nltk_data')
+# Initialize Gemini API
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+if not GEMINI_API_KEY:
+    raise ValueError("GEMINI_API_KEY environment variable not set")
 
-# Download VADER lexicon on startup to /tmp
-try:
-    nltk.data.find('vader_lexicon')
-except LookupError:
-    nltk.download('vader_lexicon', download_dir='/tmp/nltk_data')
-
-# Initialize VADER sentiment analyzer
-sia = SentimentIntensityAnalyzer()
+genai.configure(api_key=GEMINI_API_KEY)
+MODEL_NAME = "gemini-2.0-flash"
 
 
 # ============================================================================
@@ -71,79 +67,161 @@ def create_analyses_table(conn):
 
 
 # ============================================================================
-# SENTIMENT ANALYSIS
+# SENTIMENT ANALYSIS WITH GEMINI
 # ============================================================================
 
 def analyze_sentiment(text: str) -> dict:
     """
-    Analyze sentiment of review text using VADER.
-    Returns sentiment label and compound score.
-    
-    Sentiment classification:
-    - positive: compound >= 0.05
-    - negative: compound <= -0.05
-    - neutral: -0.05 < compound < 0.05
+    Analyze sentiment of review text using Google Gemini API.
+    Returns sentiment label and detailed score.
     """
-    scores = sia.polarity_scores(text)
-    compound = scores['compound']
+    prompt = f"""Analyze the sentiment of this review and provide a structured JSON response.
+
+Review: {text}
+
+Provide response in this exact JSON format:
+{{
+    "sentiment": "positive|negative|neutral",
+    "score": <number from -1.0 to 1.0>,
+    "confidence": <number from 0 to 1>,
+    "summary": "<brief explanation of sentiment>"
+}}
+
+Only return valid JSON, no additional text."""
     
-    # Classify sentiment based on compound score
-    if compound >= 0.05:
-        sentiment = "positive"
-    elif compound <= -0.05:
-        sentiment = "negative"
-    else:
-        sentiment = "neutral"
-    
-    return {
-        "sentiment": sentiment,
-        "score": round(compound, 3),
-        "details": {
-            "positive": round(scores['pos'], 3),
-            "negative": round(scores['neg'], 3),
-            "neutral": round(scores['neu'], 3),
+    try:
+        model = genai.GenerativeModel(MODEL_NAME)
+        response = model.generate_content(prompt)
+        
+        # Parse JSON response
+        response_text = response.text.strip()
+        # Clean up response if wrapped in markdown
+        if response_text.startswith("```json"):
+            response_text = response_text[7:]
+        if response_text.startswith("```"):
+            response_text = response_text[3:]
+        if response_text.endswith("```"):
+            response_text = response_text[:-3]
+        
+        result = json.loads(response_text.strip())
+        
+        return {
+            "sentiment": result.get("sentiment", "neutral").lower(),
+            "score": round(float(result.get("score", 0)), 3),
+            "confidence": round(float(result.get("confidence", 0)), 3),
+            "summary": result.get("summary", ""),
+            "details": {
+                "positive": 1.0 if result.get("sentiment", "").lower() == "positive" else 0,
+                "negative": 1.0 if result.get("sentiment", "").lower() == "negative" else 0,
+                "neutral": 1.0 if result.get("sentiment", "").lower() == "neutral" else 0,
+            }
         }
-    }
+    except Exception as e:
+        print(f"Error analyzing sentiment with Gemini: {e}")
+        # Fallback: simple heuristic analysis
+        text_lower = text.lower()
+        positive_words = ["great", "excellent", "amazing", "love", "perfect", "wonderful", "outstanding"]
+        negative_words = ["bad", "terrible", "hate", "awful", "horrible", "poor", "useless"]
+        
+        pos_count = sum(1 for word in positive_words if word in text_lower)
+        neg_count = sum(1 for word in negative_words if word in text_lower)
+        
+        if pos_count > neg_count:
+            sentiment = "positive"
+            score = 0.5
+        elif neg_count > pos_count:
+            sentiment = "negative"
+            score = -0.5
+        else:
+            sentiment = "neutral"
+            score = 0
+        
+        return {
+            "sentiment": sentiment,
+            "score": score,
+            "confidence": 0.5,
+            "summary": "Fallback analysis due to API error",
+            "details": {
+                "positive": 1.0 if sentiment == "positive" else 0,
+                "negative": 1.0 if sentiment == "negative" else 0,
+                "neutral": 1.0 if sentiment == "neutral" else 0,
+            }
+        }
 
 
 # ============================================================================
-# TOPIC EXTRACTION
+# TOPIC EXTRACTION WITH GEMINI
 # ============================================================================
 
 def extract_topics(text: str, rating: Optional[int] = None) -> list:
     """
-    Extract topics/problems from review text.
-    Uses keyword matching and sentiment indicators.
+    Extract topics/problems from review text using Google Gemini API.
+    Returns list of relevant topics found in the review.
     """
-    topics = []
-    text_lower = text.lower()
+    prompt = f"""Extract key topics and issues mentioned in this review. Return a JSON array of topic names.
+
+Review: {text}
+Rating: {rating if rating else 'Not provided'}/5
+
+Possible topics to identify: performance, quality, battery, connectivity, design, price, comfort, customer_support, heat_noise, display, installation, packaging, accessibility, software, reliability, compatibility
+
+Return response as a valid JSON array of strings (topic names only):
+["topic1", "topic2", ...]
+
+Only return the JSON array, no additional text."""
     
-    # Define keyword patterns for common topics
-    topic_keywords = {
-        "performance": ["fast", "slow", "speed", "lag", "crash", "freeze", "responsive"],
-        "quality": ["quality", "durability", "build", "material", "solid", "fragile", "flimsy"],
-        "battery": ["battery", "charge", "charging", "power", "endurance", "drain"],
-        "connectivity": ["disconnect", "connection", "wifi", "bluetooth", "signal", "lag"],
-        "design": ["design", "aesthetic", "look", "appearance", "rgb", "color", "style"],
-        "price": ["price", "expensive", "cost", "cheap", "afford", "overpriced", "value"],
-        "comfort": ["comfortable", "ergonomic", "pain", "fatigue", "typing", "click"],
-        "customer_support": ["support", "customer service", "return", "warranty", "refund"],
-        "heat_noise": ["hot", "heat", "warm", "noisy", "sound", "loud", "click", "noise"],
-        "display": ["display", "screen", "color", "brightness", "bleed", "pixel", "resolution"],
-    }
-    
-    # Match keywords to text
-    for topic, keywords in topic_keywords.items():
-        if any(keyword in text_lower for keyword in keywords):
-            topics.append(topic)
-    
-    # Infer topics from rating if available
-    if rating and rating <= 2:
-        topics.append("negative_experience")
-    elif rating and rating == 5:
-        topics.append("highly_satisfied")
-    
-    return list(set(topics))  # Remove duplicates
+    try:
+        model = genai.GenerativeModel(MODEL_NAME)
+        response = model.generate_content(prompt)
+        
+        # Parse JSON response
+        response_text = response.text.strip()
+        # Clean up response if wrapped in markdown
+        if response_text.startswith("```json"):
+            response_text = response_text[7:]
+        if response_text.startswith("```"):
+            response_text = response_text[3:]
+        if response_text.endswith("```"):
+            response_text = response_text[:-3]
+        
+        topics = json.loads(response_text.strip())
+        
+        # Add rating-based topics
+        if rating and rating <= 2:
+            topics.append("negative_experience")
+        elif rating and rating == 5:
+            topics.append("highly_satisfied")
+        
+        return list(set(topics))  # Remove duplicates
+    except Exception as e:
+        print(f"Error extracting topics with Gemini: {e}")
+        # Fallback: keyword matching
+        topics = []
+        text_lower = text.lower()
+        
+        topic_keywords = {
+            "performance": ["fast", "slow", "speed", "lag", "crash", "freeze", "responsive"],
+            "quality": ["quality", "durability", "build", "material", "solid", "fragile"],
+            "battery": ["battery", "charge", "charging", "power", "drain"],
+            "connectivity": ["disconnect", "connection", "wifi", "bluetooth", "signal"],
+            "design": ["design", "aesthetic", "look", "appearance", "color", "style"],
+            "price": ["price", "expensive", "cost", "cheap", "afford", "value"],
+            "comfort": ["comfortable", "ergonomic", "pain", "fatigue", "typing"],
+            "customer_support": ["support", "customer service", "return", "warranty"],
+            "heat_noise": ["hot", "heat", "noisy", "sound", "loud"],
+            "display": ["display", "screen", "color", "brightness", "resolution"],
+        }
+        
+        for topic, keywords in topic_keywords.items():
+            if any(keyword in text_lower for keyword in keywords):
+                topics.append(topic)
+        
+        if rating and rating <= 2:
+            topics.append("negative_experience")
+        elif rating and rating == 5:
+            topics.append("highly_satisfied")
+        
+        return list(set(topics))
 
 
 # ============================================================================
