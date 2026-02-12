@@ -402,7 +402,11 @@ pipeline {
                         string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY')
                     ]) {
                         sh '''
-                            cd ${TERRAFORM_PATH}
+                            echo "${YELLOW}Workspace: ${WORKSPACE}${NC}"
+                            echo "${YELLOW}Terraform path: ${TERRAFORM_PATH}${NC}"
+                            ls -la ${WORKSPACE}/infrastructure/ || echo "infrastructure dir not found"
+                            
+                            cd ${WORKSPACE}/infrastructure/terraform || exit 1
                             
                             echo "${YELLOW}Initializing Terraform...${NC}"
                             terraform init
@@ -460,7 +464,7 @@ EOF
                         string(credentialsId: 'gemini-api-key', variable: 'GEMINI_API_KEY')
                     ]) {
                         sh '''
-                            cd ${ANSIBLE_PATH}
+                            cd ${WORKSPACE}/infrastructure/ansible || exit 1
                             
                             # Load EC2 IP
                             source ${WORKSPACE}/ec2_ip.env
@@ -506,7 +510,7 @@ EOF
                         string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY')
                     ]) {
                         sh '''
-                            cd ${TERRAFORM_PATH}
+                            cd ${WORKSPACE}/infrastructure/terraform || exit 1
                             
                             echo "${YELLOW}Destroying AWS infrastructure...${NC}"
                             terraform destroy -var-file=terraform.tfvars -auto-approve
