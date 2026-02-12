@@ -29,8 +29,14 @@ pipeline {
     parameters {
         choice(
             name: 'ACTION',
-            choices: ['Build & Push', 'Build & Push & Deploy'],
+            choices: ['Build & Push', 'Build & Push & Deploy K8s', 'Build & Push & Deploy AWS'],
             description: 'Qu\'est-ce que vous voulez faire?'
+        )
+        
+        choice(
+            name: 'DEPLOY_TARGET',
+            choices: ['kubernetes', 'aws-ec2', 'both'],
+            description: 'Où déployer l\'application?'
         )
         
         string(
@@ -49,6 +55,12 @@ pipeline {
             name: 'SCAN_WITH_TRIVY',
             defaultValue: true,
             description: 'Scanner les images avec Trivy?'
+        )
+        
+        booleanParam(
+            name: 'TERRAFORM_DESTROY',
+            defaultValue: false,
+            description: 'Destroy l\'infrastructure AWS après le build? (économie Free Tier)'
         )
     }
     
@@ -71,10 +83,15 @@ pipeline {
         BACKEND_PATH = "${PROJECT_ROOT}/backend"
         FRONTEND_PATH = "${PROJECT_ROOT}/frontend/dashboard-react"
         K8S_PATH = "${PROJECT_ROOT}/k8s"
+        TERRAFORM_PATH = "${PROJECT_ROOT}/infrastructure/terraform"
+        ANSIBLE_PATH = "${PROJECT_ROOT}/infrastructure/ansible"
         
         // Kubernetes
         K8S_NAMESPACE = "ai-product-insights"
         KUBECONFIG = "${WORKSPACE}/.kube/config"
+        
+        // AWS
+        AWS_REGION = "eu-west-1"
         
         // Docker buildkit (désactivé pour éviter l'erreur buildx)
         DOCKER_BUILDKIT = "0"
@@ -319,7 +336,11 @@ pipeline {
         // ====================================================================
         stage('🚀 Deploy to Kubernetes') {
             when {
-                expression { params.ACTION == 'Build & Push & Deploy' }
+                expression { 
+                    params.ACTION.contains('Deploy K8s') || 
+                    params.DEPLOY_TARGET == 'kubernetes' || 
+                    params.DEPLOY_TARGET == 'both'
+                }
             }
             steps {
                 script {
@@ -337,14 +358,158 @@ pipeline {
                         echo ""
                         echo "${YELLOW}Deploying to Kubernetes...${NC}"
                         
-                        # Update image tags in manifests (optionnel)
-                        # kubectl set image deployment/scraper-service scraper-service=${SCRAPER_IMAGE} -n ${K8S_NAMESPACE}
+                        # Create namespace if not exists
+                        kubectl create namespace ${K8S_NAMESPACE} --dry-run=client -o yaml | kubectl apply -f -
                         
-                        # Ou appliquer les manifests
-                        # kubectl apply -f ${K8S_PATH}/
+                        # Apply secrets
+                        kubectl apply -f ${K8S_PATH}/secrets.yaml -n ${K8S_NAMESPACE}
+                        
+                        # Apply deployments
+                        kubectl apply -f ${K8S_PATH}/ -n ${K8S_NAMESPACE}
+                        
+                        # Wait for rollout
+                        kubectl rollout status deployment/ai-analysis-service -n ${K8S_NAMESPACE} --timeout=5m || true
                         
                         echo "${GREEN}✓ Kubernetes deployment completed${NC}"
                     '''
+                }
+            }
+        }
+        
+        // ====================================================================
+        // STAGE 7: TERRAFORM - PROVISION AWS INFRASTRUCTURE
+        // ====================================================================
+        stage('🏗️ Terraform - Provision AWS') {
+            when {
+                expression { 
+                    params.ACTION.contains('Deploy AWS') || 
+                    params.DEPLOY_TARGET == 'aws-ec2' || 
+                    params.DEPLOY_TARGET == 'both'
+                }
+            }
+            steps {
+                script {
+                    echo "${BLUE}═══════════════════════════════════════════════════════${NC}"
+                    echo "${BLUE}STAGE 7: TERRAFORM INFRASTRUCTURE PROVISIONING${NC}"
+                    echo "${BLUE}═══════════════════════════════════════════════════════${NC}"
+                    
+                    withCredentials([
+                        string(credentialsId: 'aws-access-key-id', variable: 'AWS_ACCESS_KEY_ID'),
+                        string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY')
+                    ]) {
+                        sh '''
+                            cd ${TERRAFORM_PATH}
+                            
+                            echo "${YELLOW}Initializing Terraform...${NC}"
+                            terraform init
+                            
+                            echo ""
+                            echo "${YELLOW}Validating Terraform configuration...${NC}"
+                            terraform validate
+                            
+                            echo ""
+                            echo "${YELLOW}Planning Terraform changes...${NC}"
+                            terraform plan -var-file=terraform.tfvars -out=tfplan
+                            
+                            echo ""
+                            echo "${YELLOW}Applying Terraform configuration...${NC}"
+                            terraform apply -auto-approve tfplan
+                            
+                            echo ""
+                            echo "${YELLOW}Extracting EC2 Public IP...${NC}"
+                            export EC2_PUBLIC_IP=$(terraform output -raw instance_public_ip)
+                            echo "EC2_PUBLIC_IP=${EC2_PUBLIC_IP}" > ${WORKSPACE}/ec2_ip.env
+                            echo "${GREEN}✓ EC2 Public IP: ${EC2_PUBLIC_IP}${NC}"
+                            
+                            # Update Ansible inventory
+                            echo ""
+                            echo "${YELLOW}Updating Ansible inventory...${NC}"
+                            cat > ${ANSIBLE_PATH}/inventory.ini <<EOF
+[ec2_instances]
+ec2-app ansible_host=${EC2_PUBLIC_IP} ansible_user=ec2-user ansible_ssh_private_key_file=~/.ssh/ai-product-insights-key.pem ansible_ssh_common_args='-o StrictHostKeyChecking=no'
+EOF
+                            echo "${GREEN}✓ Inventory updated${NC}"
+                        '''
+                    }
+                }
+            }
+        }
+        
+        // ====================================================================
+        // STAGE 8: ANSIBLE - DEPLOY APPLICATION TO AWS
+        // ====================================================================
+        stage('📦 Ansible - Deploy to AWS') {
+            when {
+                expression { 
+                    params.ACTION.contains('Deploy AWS') || 
+                    params.DEPLOY_TARGET == 'aws-ec2' || 
+                    params.DEPLOY_TARGET == 'both'
+                }
+            }
+            steps {
+                script {
+                    echo "${BLUE}═══════════════════════════════════════════════════════${NC}"
+                    echo "${BLUE}STAGE 8: ANSIBLE APPLICATION DEPLOYMENT${NC}"
+                    echo "${BLUE}═══════════════════════════════════════════════════════${NC}"
+                    
+                    withCredentials([
+                        string(credentialsId: 'gemini-api-key', variable: 'GEMINI_API_KEY')
+                    ]) {
+                        sh '''
+                            cd ${ANSIBLE_PATH}
+                            
+                            # Load EC2 IP
+                            source ${WORKSPACE}/ec2_ip.env
+                            
+                            echo "${YELLOW}Waiting 60s for EC2 instance to be ready...${NC}"
+                            sleep 60
+                            
+                            echo ""
+                            echo "${YELLOW}Testing SSH connectivity...${NC}"
+                            ansible all -i inventory.ini -m ping || (echo "SSH not ready yet, waiting another 30s..." && sleep 30 && ansible all -i inventory.ini -m ping)
+                            
+                            echo ""
+                            echo "${YELLOW}Running Ansible playbook...${NC}"
+                            ansible-playbook -i inventory.ini playbook.yml -e "gemini_api_key=${GEMINI_API_KEY}" -vv
+                            
+                            echo ""
+                            echo "${GREEN}═══════════════════════════════════════════════════════${NC}"
+                            echo "${GREEN}✓ APPLICATION DEPLOYED SUCCESSFULLY${NC}"
+                            echo "${GREEN}✓ Frontend URL: http://${EC2_PUBLIC_IP}${NC}"
+                            echo "${GREEN}✓ Backend API: http://${EC2_PUBLIC_IP}:8000${NC}"
+                            echo "${GREEN}═══════════════════════════════════════════════════════${NC}"
+                        '''
+                    }
+                }
+            }
+        }
+        
+        // ====================================================================
+        // STAGE 9: TERRAFORM DESTROY (Optional - Save Free Tier)
+        // ====================================================================
+        stage('🗑️ Terraform Destroy (Cleanup)') {
+            when {
+                expression { params.TERRAFORM_DESTROY == true }
+            }
+            steps {
+                script {
+                    echo "${BLUE}═══════════════════════════════════════════════════════${NC}"
+                    echo "${BLUE}STAGE 9: TERRAFORM DESTROY (Free Tier Cleanup)${NC}"
+                    echo "${BLUE}═══════════════════════════════════════════════════════${NC}"
+                    
+                    withCredentials([
+                        string(credentialsId: 'aws-access-key-id', variable: 'AWS_ACCESS_KEY_ID'),
+                        string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY')
+                    ]) {
+                        sh '''
+                            cd ${TERRAFORM_PATH}
+                            
+                            echo "${YELLOW}Destroying AWS infrastructure...${NC}"
+                            terraform destroy -var-file=terraform.tfvars -auto-approve
+                            
+                            echo "${GREEN}✓ Infrastructure destroyed${NC}"
+                        '''
+                    }
                 }
             }
         }
