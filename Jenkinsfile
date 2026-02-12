@@ -347,31 +347,35 @@ pipeline {
                     echo "${BLUE}═══════════════════════════════════════════════════════${NC}"
                     echo "${BLUE}STAGE 6: KUBERNETES DEPLOYMENT${NC}"
                     echo "${BLUE}═══════════════════════════════════════════════════════${NC}"
-                    
-                    sh '''
-                        echo "${YELLOW}Checking kubectl connectivity...${NC}"
-                        kubectl cluster-info || echo "Kubernetes cluster not available"
-                        
-                        echo ""
-                        echo "${YELLOW}Current namespace: ${K8S_NAMESPACE}${NC}"
-                        
-                        echo ""
-                        echo "${YELLOW}Deploying to Kubernetes...${NC}"
-                        
-                        # Create namespace if not exists
-                        kubectl create namespace ${K8S_NAMESPACE} --dry-run=client -o yaml | kubectl apply -f -
-                        
-                        # Apply secrets
-                        kubectl apply -f ${K8S_PATH}/secrets.yaml -n ${K8S_NAMESPACE}
-                        
-                        # Apply deployments
-                        kubectl apply -f ${K8S_PATH}/ -n ${K8S_NAMESPACE}
-                        
-                        # Wait for rollout
-                        kubectl rollout status deployment/ai-analysis-service -n ${K8S_NAMESPACE} --timeout=5m || true
-                        
-                        echo "${GREEN}✓ Kubernetes deployment completed${NC}"
-                    '''
+
+                    withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG_FILE')]) {
+                        sh '''
+                            export KUBECONFIG=${KUBECONFIG_FILE}
+
+                            echo "${YELLOW}Checking kubectl connectivity...${NC}"
+                            kubectl cluster-info
+
+                            echo ""
+                            echo "${YELLOW}Current namespace: ${K8S_NAMESPACE}${NC}"
+
+                            echo ""
+                            echo "${YELLOW}Deploying to Kubernetes...${NC}"
+
+                            # Create namespace if not exists
+                            kubectl create namespace ${K8S_NAMESPACE} --dry-run=client -o yaml | kubectl apply -f -
+
+                            # Apply secrets
+                            kubectl apply -f ${K8S_PATH}/secrets.yaml -n ${K8S_NAMESPACE}
+
+                            # Apply deployments
+                            kubectl apply -f ${K8S_PATH}/ -n ${K8S_NAMESPACE}
+
+                            # Wait for rollout
+                            kubectl rollout status deployment/ai-analysis-service -n ${K8S_NAMESPACE} --timeout=5m || true
+
+                            echo "${GREEN}✓ Kubernetes deployment completed${NC}"
+                        '''
+                    }
                 }
             }
         }
