@@ -123,6 +123,17 @@ pipeline {
                 checkout scm
                 
                 script {
+                    sh '''
+                        echo "Workspace content:"
+                        ls -la ${WORKSPACE}
+                        
+                        echo ""
+                        echo "Checking critical directories:"
+                        ls -la ${WORKSPACE}/infrastructure/ 2>/dev/null || echo "⚠ infrastructure dir missing"
+                        ls -la ${WORKSPACE}/backend/ 2>/dev/null || echo "⚠ backend dir missing"
+                        ls -la ${WORKSPACE}/frontend/ 2>/dev/null || echo "⚠ frontend dir missing"
+                    '''
+                    
                     // Display commit info
                     def gitCommit = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
                     def gitBranch = sh(script: 'git rev-parse --abbrev-ref HEAD', returnStdout: true).trim()
@@ -337,9 +348,10 @@ pipeline {
         stage('🚀 Deploy to Kubernetes') {
             when {
                 expression { 
-                    params.ACTION.contains('Deploy K8s') || 
+                    (params.ACTION.contains('Deploy K8s') || 
                     params.DEPLOY_TARGET == 'kubernetes' || 
-                    params.DEPLOY_TARGET == 'both'
+                    params.DEPLOY_TARGET == 'both') &&
+                    fileExists('kubeconfig') == true
                 }
             }
             steps {
